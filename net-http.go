@@ -13,10 +13,6 @@ type Page struct {
 	Body  []byte
 }
 
-// func handler(w http.ResponseWriter, r *http.Request) {
-// 	fmt.Fprintf(w, "Hi, i love %s", r.URL.Path[1:])
-// }
-
 func (p *Page) save() error {
 	filename := p.Title + ".txt"
 	return os.WriteFile(filename, p.Body, 0600)
@@ -41,12 +37,22 @@ func renderTemplate(w http.ResponseWriter, s string, p *Page) {
 	}
 	t.Execute(w, p)
 }
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	t, err := template.ParseFiles("index.html")
+
+	if err != nil {
+		fmt.Print("Error parsefile index.html")
+	}
+	t.Execute(w, "")
+}
+
 func viewHandler(w http.ResponseWriter, r *http.Request) {
 	title := r.URL.Path[len("/view/"):]
 	p, err := loadPage(title)
 
 	if err != nil {
-		p = &Page{Title: title}
+		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
 	}
 
 	renderTemplate(w, "view", p)
@@ -57,14 +63,22 @@ func edithandler(w http.ResponseWriter, r *http.Request) {
 	p, err := loadPage(title)
 
 	if err != nil {
-		p = &Page{Title: title}
+		fmt.Print("error")
 	}
 	renderTemplate(w, "edit", p)
 }
 
+func savehandler(w http.ResponseWriter, r *http.Request) {
+	titel := r.URL.Path[len("/save/"):]
+	body := r.FormValue("body")
+	p := &Page{Title: titel, Body: []byte(body)}
+	p.save()
+	http.Redirect(w, r, "/view/"+titel, http.StatusFound)
+}
 func main() {
-	// http.HandleFunc("/", handler)
+	http.HandleFunc("/", handler)
 	http.HandleFunc("/view/", viewHandler)
 	http.HandleFunc("/edit/", edithandler)
+	http.HandleFunc("/save/", savehandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
