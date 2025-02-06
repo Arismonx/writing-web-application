@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -33,18 +32,28 @@ func renderTemplate(w http.ResponseWriter, s string, p *Page) {
 	t, err := template.ParseFiles(s + ".html")
 
 	if err != nil {
-		fmt.Print("Error parsefile view.html")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	t.Execute(w, p)
+	err = t.Execute(w, p)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	t, err := template.ParseFiles("index.html")
 
 	if err != nil {
-		fmt.Print("Error parsefile index.html")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	t.Execute(w, "")
+	err = t.Execute(w, "")
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +72,7 @@ func edithandler(w http.ResponseWriter, r *http.Request) {
 	p, err := loadPage(title)
 
 	if err != nil {
-		fmt.Print("error")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	renderTemplate(w, "edit", p)
 }
@@ -72,7 +81,12 @@ func savehandler(w http.ResponseWriter, r *http.Request) {
 	titel := r.URL.Path[len("/save/"):]
 	body := r.FormValue("body")
 	p := &Page{Title: titel, Body: []byte(body)}
-	p.save()
+	err := p.save()
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
 	http.Redirect(w, r, "/view/"+titel, http.StatusFound)
 }
 func main() {
